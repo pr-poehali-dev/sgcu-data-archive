@@ -48,6 +48,8 @@ export const sendVerificationEmail = async (
           
           <p>Если вы не регистрировались в нашей системе, просто проигнорируйте это письмо.</p>
           
+          <p>Учетные данные для отправки: SGCUtm@gmail.com (пароль: sgcutemka)</p>
+          
           <p>С уважением,<br>Команда СГЦУ</p>
         </div>
         
@@ -68,11 +70,14 @@ export const sendVerificationEmail = async (
     //   ...emailData 
     // });
     
+    // Здесь мы просто имитируем отправку письма
     await new Promise(resolve => setTimeout(resolve, 1500)); // Имитация задержки отправки
     
     console.log("[Email Service] Письмо успешно отправлено с аккаунта SGCUtm@gmail.com");
     console.log("[Email Service] Получатель:", email);
     console.log("[Email Service] Тема:", emailData.subject);
+    console.log("[Email Service] Содержимое:", emailData.body);
+    console.log("[Email Service] Учетные данные: SGCUtm@gmail.com (пароль: sgcutemka)");
     
     // В демо-версии возвращаем true, в реальном приложении здесь должен быть анализ ответа от API
     return true;
