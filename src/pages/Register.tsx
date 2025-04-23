@@ -10,6 +10,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Database, Mail, User, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { sendVerificationEmail } from "@/lib/emailService";
+import { userDB } from "@/lib/userDatabase";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Введите корректный email" }),
@@ -39,17 +41,38 @@ const Register = () => {
     setIsSubmitting(true);
     
     try {
-      // Имитация отправки данных на сервер
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Проверяем, не существует ли уже пользователя с таким email
+      const existingUser = userDB.getUserByEmail(values.email);
       
-      console.log("Регистрационные данные:", values);
+      if (existingUser) {
+        toast.error("Пользователь с таким email уже существует", {
+          description: "Пожалуйста, используйте другой email или выполните вход",
+        });
+        setIsSubmitting(false);
+        return;
+      }
       
-      toast.success("Письмо с подтверждением отправлено на вашу почту", {
-        description: `Мы отправили инструкции на ${values.email}`,
-        duration: 5000,
-      });
+      // Генерируем токен и сохраняем данные пользователя
+      const token = btoa(`${values.email}:${Date.now()}:${Math.random().toString(36).slice(2)}`);
+      userDB.createPendingUser(values.email, values.fullName, values.password, token);
       
-      setIsSuccess(true);
+      // Отправка письма для подтверждения
+      const emailSent = await sendVerificationEmail(values.email, values.fullName);
+      
+      if (emailSent) {
+        console.log("Регистрационные данные:", values);
+        
+        toast.success("Письмо с подтверждением отправлено на вашу почту", {
+          description: `Мы отправили инструкции на ${values.email}`,
+          duration: 5000,
+        });
+        
+        setIsSuccess(true);
+      } else {
+        toast.error("Ошибка при отправке письма", {
+          description: "Пожалуйста, попробуйте позже",
+        });
+      }
     } catch (error) {
       console.error("Ошибка при регистрации:", error);
       toast.error("Ошибка при регистрации", {
@@ -88,9 +111,12 @@ const Register = () => {
                   Мы отправили письмо с подтверждением на ваш email. 
                   Перейдите по ссылке в письме для завершения регистрации.
                 </p>
-                <p className="text-sm text-muted-foreground mt-4">
-                  Письмо отправлено с адреса <span className="font-medium">SGCUtm@gmail.com</span>
-                </p>
+                <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100">
+                  <p className="text-sm text-blue-700">
+                    <span className="font-medium">Важно:</span> Письмо отправлено с адреса <span className="font-medium">SGCUtm@gmail.com</span>. 
+                    Пожалуйста, проверьте папку "Спам", если не видите письмо во входящих.
+                  </p>
+                </div>
               </div>
             ) : (
               <Form {...form}>
@@ -167,7 +193,7 @@ const Register = () => {
                   />
                   
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? "Регистрация..." : "Зарегистрироваться"}
+                    {isSubmitting ? "Отправка..." : "Зарегистрироваться"}
                   </Button>
                 </form>
               </Form>
